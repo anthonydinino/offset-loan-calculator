@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Loan Repayment Simulator (Fortnightly)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --muted: #94a3b8;
+        --text: #e5e7eb;
+        --accent: #60a5fa;
+        --accent2: #34d399;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+        --input-bg: #0b1220;
+        --border: #1f2937;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(
+            1200px 600px at 20% -10%,
+            rgba(96, 165, 250, 0.12) 0,
+            rgba(96, 165, 250, 0) 40%
+          ),
+          radial-gradient(
+            1000px 400px at 90% 10%,
+            rgba(52, 211, 153, 0.1) 0,
+            rgba(52, 211, 153, 0) 30%
+          ),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 24px 20px 10px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      p.subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .container {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 16px;
+        padding: 10px 20px 24px;
+        flex: 1;
+      }
+      @media (max-width: 980px) {
+        .container {
+          grid-template-columns: 1fr;
+          padding: 8px 4vw 16px;
+        }
+        .card {
+          min-width: 0;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .chart-card {
+          min-width: 0;
+          width: 100%;
+        }
+        .panel {
+          padding: 10px 4vw;
+        }
+        .chart-wrap {
+          padding: 8px 0 12px;
+          overflow-x: auto;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        .stat .value {
+          font-size: 16px;
+        }
+        .stat .label {
+          font-size: 11px;
+        }
+        .legend {
+          font-size: 11px;
+        }
+        button {
+          font-size: 15px;
+          padding: 9px 10px;
+        }
+      }
+      .card {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0)
+        );
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.28);
+      }
+      .panel {
+        padding: 16px;
+      }
+      .inputs {
+        display: grid;
+        gap: 12px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .field label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .input-wrap {
+        position: relative;
+      }
+      .input-wrap input {
+        width: 100%;
+        padding: 12px 12px 12px 40px;
+        color: var(--text);
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        outline: none;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+      }
+      .input-wrap input:focus {
+        border-color: #274060;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+      }
+      .prefix,
+      .suffix {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 13px;
+        pointer-events: none;
+        user-select: none;
+      }
+      .prefix {
+        left: 10px;
+      }
+      .suffix {
+        right: 10px;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+      }
+      button {
+        background: linear-gradient(
+          180deg,
+          rgba(96, 165, 250, 0.18),
+          rgba(96, 165, 250, 0.1)
+        );
+        color: var(--text);
+        border: 1px solid #1e3a5f;
+        padding: 10px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: transform 0.05s ease, filter 0.2s ease, background 0.2s ease;
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button.secondary {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.06),
+          rgba(255, 255, 255, 0.02)
+        );
+        border-color: var(--border);
+        color: var(--muted);
+      }
+      button.warn {
+        background: linear-gradient(
+          180deg,
+          rgba(245, 158, 11, 0.18),
+          rgba(245, 158, 11, 0.08)
+        );
+        border-color: #7a4b00;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .stat {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .stat .label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .stat .value {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .chart-card {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-height: 420px;
+      }
+      .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px 0 16px;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .legend {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .legend .item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+      .chart-wrap {
+        padding: 8px 12px 16px;
+      }
+      footer {
+        padding: 12px 20px 24px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+      @media (max-width: 980px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Loan Repayment Simulator</h1>
+      <p class="subtitle">
+        Fortnightly schedule with offset account and interest-only component.
+        Visualized with a chart.
+      </p>
+    </header>
+    <div class="container">
+      <div class="card panel">
+        <div class="inputs">
+          <div class="field">
+            <label for="loanAmount">Loan Amount</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input
+                id="loanAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                value=""
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label for="offsetBalance">Offset Account Balance</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input
+                id="offsetBalance"
+                type="number"
+                step="0.01"
+                min="0"
+                value=""
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label for="interestRate">Annual Interest Rate</label>
+            <div class="input-wrap">
+              <input
+                id="interestRate"
+                type="number"
+                step="0.0001"
+                min="0"
+                max="1"
+                value=""
+              />
+              <span class="suffix">as decimal (e.g. 0.0549)</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="fortnightlyPayment">Fortnightly Loan Payment</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input
+                id="fortnightlyPayment"
+                type="number"
+                step="0.01"
+                min="0"
+                value=""
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label for="fortnightlyIncome"
+              >Fortnightly Income (deposited to offset)</label
+            >
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input
+                id="fortnightlyIncome"
+                type="number"
+                step="0.01"
+                min="0"
+                value=""
+              />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="runBtn">Run Simulation</button>
+            <button id="resetBtn" class="secondary">Reset</button>
+            <button id="exampleBtn" class="warn">Example Scenario</button>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Duration (Yrs / Months)</div>
+              <div id="statDuration" class="value">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">Total Interest Paid</div>
+              <div id="statInterest" class="value">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="chart-header">
+          <div class="legend">
+            <span class="item">Each point = 1 fortnight</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart" height="140"></canvas>
+        </div>
+      </div>
+    </div>
+    <footer>Anthony Dinino &copy; 2025</footer>
+    <script>
+      // Ensure DOM is loaded before wiring up
+      document.addEventListener("DOMContentLoaded", () => {
+        // Load saved values from localStorage
+        function loadSavedValues() {
+          const inputs = [
+            "loanAmount",
+            "offsetBalance",
+            "interestRate",
+            "fortnightlyPayment",
+            "fortnightlyIncome",
+          ];
+          inputs.forEach((id) => {
+            const savedValue = localStorage.getItem(`loan_calc_${id}`);
+            if (savedValue !== null) {
+              document.getElementById(id).value = savedValue;
+            }
+          });
+        }
+
+        // Save values to localStorage
+        function saveValues() {
+          const inputs = getInputs();
+          Object.entries(inputs).forEach(([key, value]) => {
+            if (isFinite(value)) {
+              localStorage.setItem(`loan_calc_${key}`, value);
+            }
+          });
+        }
+
+        const fmtMoney = (n) =>
+          n === null || n === undefined || !isFinite(n)
+            ? "—"
+            : n.toLocaleString(undefined, {
+                style: "currency",
+                currency: "USD",
+                maximumFractionDigits: 2,
+              });
+
+        function simulate({
+          loanAmount,
+          offsetBalance,
+          interestRate,
+          fortnightlyPayment,
+          fortnightlyIncome,
+          maxFortnights = 5000,
+        }) {
+          let loan_amount = Number(loanAmount);
+          let offset_account_balance = Number(offsetBalance);
+          const rate = Number(interestRate);
+          const payment = Number(fortnightlyPayment);
+          const income = Number(fortnightlyIncome);
+          let fortnight_counter = 0;
+          const labels = [];
+          const remainingSeries = [];
+          const offsetSeries = [];
+          const interestSeries = [];
+          const principalSeries = [];
+          let totalInterest = 0;
+
+          // Guard for already paid-off cases
+          if (loan_amount - offset_account_balance <= 0) {
+            return {
+              labels,
+              remainingSeries,
+              offsetSeries,
+              interestSeries,
+              principalSeries,
+              fortnights: 0,
+              years: 0,
+              monthsApprox: 0,
+              totalInterest: 0,
+              paidOff: true,
+              ranOutOfFunds: false,
+            };
+          }
+
+          while (loan_amount - offset_account_balance > 0.0) {
+            if (fortnight_counter >= maxFortnights) break;
+            fortnight_counter += 1;
+
+            // Income to offset
+            offset_account_balance += income;
+
+            // Interest on net balance
+            const interest_payment =
+              ((loan_amount - offset_account_balance) * rate) / 26.0;
+
+            // Preserve Rust behavior even if interest goes negative
+            const principal_payment = payment - interest_payment;
+
+            // Check if we can make payment from offset
+            if (offset_account_balance < payment) {
+              // Record and stop
+              labels.push(`F${fortnight_counter}`);
+              remainingSeries.push(loan_amount);
+              offsetSeries.push(offset_account_balance);
+              interestSeries.push(interest_payment);
+              principalSeries.push(principal_payment);
+              // Not paid off, ran out of funds
+              return {
+                labels,
+                remainingSeries,
+                offsetSeries,
+                interestSeries,
+                principalSeries,
+                fortnights: fortnight_counter,
+                years: fortnight_counter / 26.0,
+                monthsApprox: ((fortnight_counter % 26) * 2) / 4.345,
+                totalInterest,
+                paidOff: false,
+                ranOutOfFunds: true,
+              };
+            }
+
+            // Deduct payment from offset
+            offset_account_balance -= payment;
+
+            // Reduce loan by principal component
+            loan_amount -= principal_payment;
+            totalInterest += Math.max(0, interest_payment);
+
+            // Snapshot after payment
+            labels.push(`F${fortnight_counter}`);
+            remainingSeries.push(loan_amount);
+            offsetSeries.push(offset_account_balance);
+            interestSeries.push(interest_payment);
+            principalSeries.push(principal_payment);
+
+            // Stop if offset now covers the remaining loan
+            if (loan_amount <= offset_account_balance) {
+              return {
+                labels,
+                remainingSeries,
+                offsetSeries,
+                interestSeries,
+                principalSeries,
+                fortnights: fortnight_counter,
+                years: fortnight_counter / 26.0,
+                monthsApprox: ((fortnight_counter % 26) * 2) / 4.345,
+                totalInterest,
+                paidOff: true,
+                ranOutOfFunds: false,
+              };
+            }
+          }
+
+          const years = fortnight_counter / 26.0;
+          const remFortnights = fortnight_counter % 26;
+          const approxMonths = (remFortnights * 2) / 4.345;
+
+          return {
+            labels,
+            remainingSeries,
+            offsetSeries,
+            interestSeries,
+            principalSeries,
+            fortnights: fortnight_counter,
+            years,
+            monthsApprox: approxMonths,
+            totalInterest,
+          };
+        }
+
+        let chartInstance = null;
+
+        function renderChart(data) {
+          const canvas = document.getElementById("chart");
+          if (!canvas) {
+            console.error("Chart canvas not found.");
+            return;
+          }
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            console.error("Unable to get 2D context for chart.");
+            return;
+          }
+
+          // If no data, clear any existing chart and exit
+          const hasData =
+            data && Array.isArray(data.labels) && data.labels.length > 0;
+          if (!hasData) {
+            if (chartInstance) {
+              chartInstance.destroy();
+              chartInstance = null;
+            }
+            return;
+          }
+
+          const dsCommon = {
+            tension: 0.25,
+            pointRadius: 0,
+            pointHoverRadius: 3,
+            borderWidth: 2,
+          };
+          const config = {
+            type: "line",
+            data: {
+              labels: data.labels,
+              datasets: [
+                {
+                  label: "Remaining Loan",
+                  data: data.remainingSeries,
+                  borderColor: "#60a5fa",
+                  backgroundColor: "rgba(96,165,250,0.15)",
+                  fill: false,
+                  yAxisID: "y",
+                  ...dsCommon,
+                },
+                {
+                  label: "Offset Balance",
+                  data: data.offsetSeries,
+                  borderColor: "#34d399",
+                  backgroundColor: "rgba(52,211,153,0.12)",
+                  fill: false,
+                  yAxisID: "y",
+                  ...dsCommon,
+                },
+                {
+                  label: "Interest (per fortnight)",
+                  data: data.interestSeries,
+                  callbacks: {
+                    label: function (ctx) {
+                      // Only show Interest and Principal datasets
+                      const allowed = [
+                        "Interest (per fortnight)",
+                        "Principal (per fortnight)",
+                      ];
+                      if (!allowed.includes(ctx.dataset.label)) {
+                        return null;
+                      }
+                      const label = ctx.dataset.label || "";
+                      const val = ctx.parsed.y;
+                      return `${label}: ${fmtMoney(val)}`;
+                    },
+                    // Remove title for cleaner tooltip
+                    title: function () {
+                      return "";
+                    },
+                  },
+                  label: "Principal (per fortnight)",
+                  data: data.principalSeries,
+                  borderColor: "#ef4444",
+                  backgroundColor: "rgba(239,68,68,0.10)",
+                  fill: false,
+                  yAxisID: "y1",
+                  hidden: true,
+                  legend: { display: false },
+                  ...dsCommon,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: {
+                  display: true,
+                  labels: {
+                    color: "#cbd5e1",
+                    filter: function (item) {
+                      // Remove principal from legend
+                      return item.text !== "Principal (per fortnight)";
+                    },
+                  },
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function (ctx) {
+                      const label = ctx.dataset.label || "";
+                      const val = ctx.parsed.y;
+                      return `${label}: ${fmtMoney(val)}`;
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  ticks: { color: "#9ca3af" },
+                  grid: { color: "rgba(148,163,184,0.1)" },
+                },
+                y: {
+                  position: "left",
+                  ticks: { color: "#9ca3af", callback: (v) => fmtMoney(v) },
+                  grid: { color: "rgba(148,163,184,0.08)" },
+                },
+                y1: {
+                  position: "right",
+                  ticks: { color: "#9ca3af", callback: (v) => fmtMoney(v) },
+                  grid: {
+                    drawOnChartArea: false,
+                    color: "rgba(148,163,184,0.08)",
+                  },
+                },
+              },
+            },
+          };
+          if (chartInstance) {
+            chartInstance.destroy();
+          }
+          chartInstance = new Chart(ctx, config);
+        }
+
+        function updateStats(result) {
+          const d = document.getElementById("statDuration");
+          const t = document.getElementById("statInterest");
+          if (!result || !result.labels || result.labels.length === 0) {
+            d.textContent = "—";
+            t.textContent = "—";
+            return;
+          }
+          const yearsWhole = Math.floor(result.years);
+          const monthsRounded = Math.round(result.monthsApprox);
+          if (result.ranOutOfFunds) {
+            d.textContent = "Not paid off";
+            t.textContent = "—";
+          } else {
+            d.textContent = `${yearsWhole} yrs ${monthsRounded} mos`;
+            t.textContent =
+              result.totalInterest >= 0
+                ? result.totalInterest.toLocaleString(undefined, {
+                    style: "currency",
+                    currency: "AUD",
+                    maximumFractionDigits: 2,
+                  })
+                : "—";
+          }
+        }
+
+        function getInputs() {
+          const loanAmount = parseFloat(
+            document.getElementById("loanAmount").value
+          );
+          const offsetBalance = parseFloat(
+            document.getElementById("offsetBalance").value
+          );
+          const interestRate = parseFloat(
+            document.getElementById("interestRate").value
+          );
+          const fortnightlyPayment = parseFloat(
+            document.getElementById("fortnightlyPayment").value
+          );
+          const fortnightlyIncome = parseFloat(
+            document.getElementById("fortnightlyIncome").value
+          );
+          return {
+            loanAmount,
+            offsetBalance,
+            interestRate,
+            fortnightlyPayment,
+            fortnightlyIncome,
+          };
+        }
+
+        function inputsValid(i) {
+          return (
+            isFinite(i.loanAmount) &&
+            i.loanAmount >= 0 &&
+            isFinite(i.offsetBalance) &&
+            i.offsetBalance >= 0 &&
+            isFinite(i.interestRate) &&
+            i.interestRate >= 0 &&
+            isFinite(i.fortnightlyPayment) &&
+            i.fortnightlyPayment >= 0 &&
+            isFinite(i.fortnightlyIncome) &&
+            i.fortnightlyIncome >= 0
+          );
+        }
+
+        function run() {
+          const inputs = getInputs();
+          if (!inputsValid(inputs)) {
+            alert("Please enter valid non-negative numbers for all inputs.");
+            return;
+          }
+          saveValues(); // Save values when running simulation
+          const result = simulate(inputs);
+          renderChart(result);
+          updateStats(result);
+          if (
+            result.labels.length > 0 &&
+            result.remainingSeries[result.remainingSeries.length - 1] > 0
+          ) {
+            console.warn(
+              "Simulation ended before payoff. Possibly insufficient funds to continue making payments."
+            );
+          }
+        }
+
+        function reset() {
+          document.getElementById("loanAmount").value = "";
+          document.getElementById("offsetBalance").value = "";
+          document.getElementById("interestRate").value = "";
+          document.getElementById("fortnightlyPayment").value = "";
+          document.getElementById("fortnightlyIncome").value = "";
+
+          // Clear localStorage
+          const inputs = [
+            "loanAmount",
+            "offsetBalance",
+            "interestRate",
+            "fortnightlyPayment",
+            "fortnightlyIncome",
+          ];
+          inputs.forEach((id) => localStorage.removeItem(`loan_calc_${id}`));
+
+          // Clear chart and stats
+          renderChart({
+            labels: [],
+            remainingSeries: [],
+            offsetSeries: [],
+            interestSeries: [],
+            principalSeries: [],
+          });
+          updateStats(null);
+        }
+
+        function exampleScenario() {
+          document.getElementById("loanAmount").value = 500000;
+          document.getElementById("offsetBalance").value = 100000;
+          document.getElementById("interestRate").value = 0.06;
+          document.getElementById("fortnightlyPayment").value = 1500;
+          document.getElementById("fortnightlyIncome").value = 2500;
+          run();
+        }
+
+        // Wire up buttons
+        document.getElementById("runBtn").addEventListener("click", run);
+        document.getElementById("resetBtn").addEventListener("click", reset);
+        document
+          .getElementById("exampleBtn")
+          .addEventListener("click", exampleScenario);
+
+        // Load any previously saved values
+        loadSavedValues();
+      });
+    </script>
+  </body>
+</html>
