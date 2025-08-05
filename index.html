@@ -414,7 +414,7 @@
             ? "—"
             : n.toLocaleString(undefined, {
                 style: "currency",
-                currency: "USD",
+                currency: "AUD",
                 maximumFractionDigits: 2,
               });
 
@@ -597,38 +597,6 @@
                   yAxisID: "y",
                   ...dsCommon,
                 },
-                {
-                  label: "Interest (per fortnight)",
-                  data: data.interestSeries,
-                  callbacks: {
-                    label: function (ctx) {
-                      // Only show Interest and Principal datasets
-                      const allowed = [
-                        "Interest (per fortnight)",
-                        "Principal (per fortnight)",
-                      ];
-                      if (!allowed.includes(ctx.dataset.label)) {
-                        return null;
-                      }
-                      const label = ctx.dataset.label || "";
-                      const val = ctx.parsed.y;
-                      return `${label}: ${fmtMoney(val)}`;
-                    },
-                    // Remove title for cleaner tooltip
-                    title: function () {
-                      return "";
-                    },
-                  },
-                  label: "Principal (per fortnight)",
-                  data: data.principalSeries,
-                  borderColor: "#ef4444",
-                  backgroundColor: "rgba(239,68,68,0.10)",
-                  fill: false,
-                  yAxisID: "y1",
-                  hidden: true,
-                  legend: { display: false },
-                  ...dsCommon,
-                },
               ],
             },
             options: {
@@ -640,10 +608,6 @@
                   display: true,
                   labels: {
                     color: "#cbd5e1",
-                    filter: function (item) {
-                      // Remove principal from legend
-                      return item.text !== "Principal (per fortnight)";
-                    },
                   },
                 },
                 tooltip: {
@@ -665,14 +629,6 @@
                   position: "left",
                   ticks: { color: "#9ca3af", callback: (v) => fmtMoney(v) },
                   grid: { color: "rgba(148,163,184,0.08)" },
-                },
-                y1: {
-                  position: "right",
-                  ticks: { color: "#9ca3af", callback: (v) => fmtMoney(v) },
-                  grid: {
-                    drawOnChartArea: false,
-                    color: "rgba(148,163,184,0.08)",
-                  },
                 },
               },
             },
