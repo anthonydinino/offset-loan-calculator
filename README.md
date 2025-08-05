@@ -4,7 +4,7 @@ A web-based calculator that simulates loan repayments with an offset account, he
 
 ## Demo
 
-Try it live: [Offset Loan Calculator Demo](https://your-demo-url-here.com)
+Try it live: [Offset Loan Calculator Demo](https://offset-loan-calculator.vercel.app/)
 
 ## Features
 
